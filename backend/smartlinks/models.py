@@ -20,4 +20,9 @@ class SmartLink(models.Model):
     resolution = models.OneToOneField(Resolution, on_delete=models.CASCADE)
     album = models.JSONField()
     links = models.JSONField()
+    design = models.CharField(
+        max_length=20,
+        choices=[("classic", "Classic"), ("split", "Album left")],
+        default="classic",
+    )
     created_at = models.DateTimeField(auto_now_add=True)

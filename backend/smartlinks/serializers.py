@@ -49,6 +49,7 @@ class ResolutionSerializer(serializers.ModelSerializer):
 class PublishSerializer(serializers.Serializer):
     candidate_ids = serializers.ListField(child=serializers.UUIDField(), max_length=len(PLATFORMS), default=list)
     manual_urls = serializers.ListField(child=serializers.URLField(max_length=1000), max_length=len(PLATFORMS), default=list)
+    design = serializers.ChoiceField(choices=("classic", "split"), default="classic")
 
     def validate_manual_urls(self, values):
         for value in values:
@@ -73,5 +74,5 @@ class SmartLinkSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = SmartLink
-        fields = ["slug", "resolution_id", "album", "links", "created_at"]
+        fields = ["slug", "resolution_id", "album", "links", "design", "created_at"]
         read_only_fields = fields

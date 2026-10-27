@@ -31,6 +31,12 @@ button:disabled {
   outline: 2px solid #8490f5;
   outline-offset: 4px;
 }
+#album-url:focus-visible {
+  outline: none;
+}
+.create-scroll-pane {
+  scrollbar-gutter: stable;
+}
 .panel {
   border: 1px solid #e5e8f0;
   border-radius: 14px;

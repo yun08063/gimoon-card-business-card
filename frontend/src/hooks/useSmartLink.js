@@ -11,6 +11,7 @@ export default function useSmartLink() {
   const [job, setJob] = useState(null);
   const [selected, setSelected] = useState({});
   const [manual, setManual] = useState("");
+  const [design, setDesign] = useState("classic");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [publishing, setPublishing] = useState(false);
@@ -117,6 +118,8 @@ export default function useSmartLink() {
         if (typeof value.url === "string") setUrl(value.url);
         if (typeof value.country === "string") setCountry(value.country);
         if (typeof value.manual === "string") setManual(value.manual);
+        if (value.design === "classic" || value.design === "split")
+          setDesign(value.design);
         if (value.selected && typeof value.selected === "object")
           setSelected(value.selected);
         if (typeof value.id === "string" && typeof value.token === "string")
@@ -137,12 +140,13 @@ export default function useSmartLink() {
           country,
           manual,
           selected,
+          design,
         }),
       );
     } catch {
       /* Draft recovery is optional when browser storage is unavailable. */
     }
-  }, [country, job, manual, published, selected, session, url]);
+  }, [country, design, job, manual, published, selected, session, url]);
   useEffect(() => {
     if (!session) return;
     const controller = new AbortController();
@@ -214,6 +218,7 @@ export default function useSmartLink() {
     setSelected({});
     setSession(null);
     setManual("");
+    setDesign("classic");
     try {
       localStorage.setItem(
         storageKey,
@@ -262,6 +267,7 @@ export default function useSmartLink() {
               .split("\n")
               .map((line) => line.trim())
               .filter(Boolean),
+            design,
           }),
         },
       );
@@ -308,6 +314,7 @@ export default function useSmartLink() {
         headers: capability?.token ? { "X-Edit-Token": capability.token } : {},
       });
       setEditing({ capability, smartlink: result.smartlink });
+      setDesign(result.smartlink.design || "classic");
       setJob(result.resolution);
       setSession(capability);
       setSelected(
@@ -390,6 +397,7 @@ export default function useSmartLink() {
     setUrl("");
     setManual("");
     setSelected({});
+    setDesign("classic");
     setError("");
     setPublished(null);
     setEditing(null);
@@ -412,6 +420,8 @@ export default function useSmartLink() {
     setSelected,
     manual,
     setManual,
+    design,
+    setDesign,
     error,
     busy,
     publishing,

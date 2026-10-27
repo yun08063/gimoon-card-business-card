@@ -57,6 +57,12 @@ export default function Icon({ name, size = 20, className = "" }) {
       </>
     ),
     chevron: <path d="m6 9 6 6 6-6" />,
+    chevronLeft: <path d="m14 18-6-6 6-6" />,
+    menu: (
+      <>
+        <path d="M4 6h16M4 12h16M4 18h16" />
+      </>
+    ),
     play: <path d="m9 5 11 7-11 7Z" />,
     shield: (
       <>

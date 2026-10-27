@@ -33,7 +33,7 @@ export const platformStatus = {
   },
   excluded: {
     label: "검색 제외",
-    description: "자동 검색 결과에 포함하지 않아요",
+    description: "자동 검색 안 함",
     tone: "disabled",
   },
 };

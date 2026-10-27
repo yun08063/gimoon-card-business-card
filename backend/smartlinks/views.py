@@ -88,7 +88,14 @@ class ResolutionViewSet(viewsets.GenericViewSet):
             used.add(key)
             links.append({"platform": key, "url": canonical(key, identifier, job.country) or url, "verification": "manual"})
         with transaction.atomic():
-            published, _ = SmartLink.objects.update_or_create(resolution=job, defaults={"album": job.result["album"], "links": links})
+            published, _ = SmartLink.objects.update_or_create(
+                resolution=job,
+                defaults={
+                    "album": job.result["album"],
+                    "links": links,
+                    "design": serializer.validated_data["design"],
+                },
+            )
         return Response(SmartLinkSerializer(published).data)
 
 
@@ -141,7 +148,8 @@ class SmartLinkViewSet(viewsets.ReadOnlyModelViewSet):
             used.add(key)
             links.append({"platform": key, "url": canonical(key, identifier, job.country) or url, "verification": "manual"})
         link.links = links
-        link.save(update_fields=["links"])
+        link.design = serializer.validated_data["design"]
+        link.save(update_fields=["links", "design"])
         return Response(SmartLinkSerializer(link).data)
 
     def destroy(self, request, *args, **kwargs):

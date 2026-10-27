@@ -52,13 +52,13 @@ export default function Home() {
   const {
     url,
     setUrl,
-    country,
-    setCountry,
     job,
     selected,
     setSelected,
     manual,
     setManual,
+    design,
+    setDesign,
     error,
     busy,
     publishing,
@@ -79,6 +79,7 @@ export default function Home() {
   const [manualInput, setManualInput] = useState("");
   const [manualError, setManualError] = useState("");
   const [leavePrompt, setLeavePrompt] = useState(null);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const confirmedLeave = useRef(false);
   useEffect(() => {
     if (!authLoading && !user) router.replace("/login");
@@ -242,8 +243,12 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f6f7fb] text-[#202431]">
-      <aside className="fixed inset-y-0 left-0 z-20 hidden w-[216px] flex-col bg-[#15171f] px-5 py-8 lg:flex">
+    <div className="min-h-screen bg-[#f6f7fb] text-[#202431] xl:h-dvh xl:min-h-0 xl:overflow-hidden">
+      <aside
+        aria-hidden={!sidebarOpen}
+        inert={!sidebarOpen}
+        className={`fixed inset-y-0 left-0 z-50 hidden w-[216px] flex-col bg-[#15171f] px-5 py-6 transition-transform duration-200 lg:flex ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}
+      >
         <a
           href="/"
           onClick={(event) => guardNavigation(event, "/")}
@@ -257,44 +262,59 @@ export default function Home() {
             STUDIO
           </span>
         </a>
-        <div className="mt-12 px-3 text-[9px] font-semibold tracking-[.14em] text-[#666b7c]">
-          WORKSPACE
-        </div>
-        <a
-          href="/"
-          onClick={(event) => guardNavigation(event, "/")}
-          className="mt-4 flex w-full items-center gap-3 rounded-lg bg-white/[.07] px-3 py-3 text-left text-xs font-medium text-white"
-        >
-          <Icon name="grid" size={17} />
-          <span>내 스마트 링크</span>
-        </a>
-        <button
-          onClick={startNewLink}
-          className="mt-3 flex w-full items-center gap-3 rounded-lg bg-white/[.07] px-3 py-3 text-left text-xs font-medium text-white"
-        >
-          <Icon name="plus" size={17} />새 링크 만들기
-        </button>
-        <div className="mt-auto rounded-xl border border-white/10 bg-white/[.025] p-4">
-          <div className="mb-3 flex h-8 w-8 items-center justify-center rounded-lg bg-[#292c40] text-[#9ca7ff]">
-            <Icon name="music" size={16} />
-          </div>
-          <p className="text-xs font-medium text-[#d8dbe4]">
-            음악에 더 가까이.
-          </p>
-          <p className="mt-2 text-[11px] leading-5 text-[#777f93]">
-            팬이 원하는 곳에서
-            <br />
-            당신의 음악을 만나도록.
-          </p>
-        </div>
-        <div className="mt-6 flex items-center gap-2 px-2 text-[10px] text-[#666b7c]">
-          <span className="h-1.5 w-1.5 rounded-full bg-[#6d7e9b]" />
-          Smart links studio
-        </div>
+        {sidebarOpen && (
+          <>
+            <div className="mt-12 px-3 text-[9px] font-semibold tracking-[.14em] text-[#666b7c]">
+              WORKSPACE
+            </div>
+            <a
+              href="/"
+              onClick={(event) => guardNavigation(event, "/")}
+              className="mt-4 flex w-full items-center gap-3 rounded-lg bg-white/[.07] px-3 py-3 text-left text-xs font-medium text-white"
+            >
+              <Icon name="grid" size={17} />
+              <span>내 스마트 링크</span>
+            </a>
+            <button
+              onClick={startNewLink}
+              className="mt-3 flex w-full items-center gap-3 rounded-lg bg-white/[.07] px-3 py-3 text-left text-xs font-medium text-white"
+            >
+              <Icon name="plus" size={17} />새 링크 만들기
+            </button>
+            <div className="mt-auto rounded-xl border border-white/10 bg-white/[.025] p-4">
+              <div className="mb-3 flex h-8 w-8 items-center justify-center rounded-lg bg-[#292c40] text-[#9ca7ff]">
+                <Icon name="music" size={16} />
+              </div>
+              <p className="text-xs font-medium text-[#d8dbe4]">
+                음악에 더 가까이.
+              </p>
+              <p className="mt-2 text-[11px] leading-5 text-[#777f93]">
+                팬이 원하는 곳에서
+                <br />
+                당신의 음악을 만나도록.
+              </p>
+            </div>
+            <div className="mt-6 flex items-center gap-2 px-2 text-[10px] text-[#666b7c]">
+              <span className="h-1.5 w-1.5 rounded-full bg-[#6d7e9b]" />
+              Smart links studio
+            </div>
+          </>
+        )}
       </aside>
-      <div className="lg:ml-[216px]">
-        <header className="flex h-[76px] items-center justify-between border-b border-slate-200/80 bg-white px-5 sm:px-9 xl:px-12">
-          <div className="flex items-center gap-2 text-xs text-slate-400">
+      <div
+        className={`transition-[margin] duration-200 xl:flex xl:h-full xl:min-h-0 xl:flex-col ${sidebarOpen ? "lg:ml-[216px]" : ""}`}
+      >
+        <header className="sticky top-0 z-40 flex h-[76px] shrink-0 items-center justify-between border-b border-slate-200/80 bg-white/95 px-5 backdrop-blur sm:px-9 xl:px-12">
+          <div className="flex min-w-0 items-center gap-3 text-xs text-slate-400">
+            <button
+              type="button"
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              aria-label={sidebarOpen ? "사이드바 숨기기" : "사이드바 보이기"}
+              title={sidebarOpen ? "사이드바 숨기기" : "사이드바 보이기"}
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition hover:border-[#aab3fc] hover:text-[#5865f2]"
+            >
+              <Icon name="menu" size={17} />
+            </button>
             <span className="font-semibold text-slate-800 lg:hidden">
               gimoon /
             </span>
@@ -337,9 +357,9 @@ export default function Home() {
         </header>
         <main
           id="create"
-          className="mx-auto max-w-[1320px] px-5 pt-9 pb-8 sm:px-9 xl:px-12 xl:pt-11"
+          className="mx-auto max-w-[1800px] px-5 pt-6 pb-6 sm:px-9 xl:flex xl:min-h-0 xl:flex-1 xl:flex-col xl:overflow-hidden xl:px-10"
         >
-          <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
+          <div className="mb-5 flex shrink-0 flex-wrap items-center justify-between gap-4">
             <div>
               <p className="mb-2 text-[10px] font-semibold tracking-[.14em] text-[#5865f2]">
                 {editing ? "EDIT SMART LINK" : "NEW SMART LINK"}
@@ -354,16 +374,26 @@ export default function Home() {
             </div>
             {job && (
               <button
-                onClick={startNewLink}
-                className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-medium text-slate-600 hover:border-slate-300"
+                onClick={editing ? publish : startNewLink}
+                disabled={editing && (publishing || !count)}
+                className={`flex items-center gap-2 rounded-lg px-3.5 py-2.5 text-xs font-medium transition disabled:cursor-default disabled:opacity-50 ${editing ? "bg-[#5865f2] text-white hover:bg-[#4653dc]" : "border border-slate-200 bg-white text-slate-600 hover:border-slate-300"}`}
               >
-                <Icon name="plus" size={15} />
-                새로 만들기
+                {editing ? (
+                  <>
+                    <Icon name="check" size={15} />
+                    {publishing ? "저장 중…" : "저장"}
+                  </>
+                ) : (
+                  <>
+                    <Icon name="plus" size={15} />
+                    새로 만들기
+                  </>
+                )}
               </button>
             )}
           </div>
-          <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_292px] 2xl:gap-10">
-            <div className="min-w-0">
+          <div className="grid gap-8 xl:min-h-0 xl:flex-1 xl:grid-cols-[minmax(0,1.45fr)_minmax(380px,0.8fr)] 2xl:gap-10">
+            <div className="create-scroll-pane order-1 min-w-0 xl:order-2 xl:min-h-0 xl:overflow-x-hidden xl:overflow-y-auto xl:overscroll-contain xl:pr-4">
               <ol className="mb-6 flex items-center gap-2 sm:gap-3">
                 {["앨범 불러오기", "링크 확인", "발행하기"].map(
                   (label, index) => (
@@ -410,7 +440,7 @@ export default function Home() {
                   <label htmlFor="album-url" className="sr-only">
                     앨범 상세 주소
                   </label>
-                  <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-[#fafbfe] px-3.5 transition focus-within:border-[#8490f5] focus-within:bg-white focus-within:ring-3 focus-within:ring-[#5865f2]/[.07]">
+                  <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-[#fafbfe] px-3.5 transition focus-within:border-slate-300 focus-within:bg-white">
                     <Icon
                       name="music"
                       size={18}
@@ -426,23 +456,7 @@ export default function Home() {
                       className="min-w-0 grow bg-transparent py-4 text-xs outline-none placeholder:text-slate-400 sm:text-[13px]"
                     />
                   </div>
-                  <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-                    <label className="flex items-center gap-2 text-[11px] text-slate-500">
-                      <Icon name="globe" size={15} />
-                      검색 국가
-                      <select
-                        aria-label="검색 국가"
-                        value={country}
-                        onChange={(e) => setCountry(e.target.value)}
-                        className="rounded-md border border-slate-200 bg-white px-2 py-1.5 text-[11px] font-medium text-slate-700"
-                      >
-                        <option value="KR">한국 (KR)</option>
-                        <option value="US">미국 (US)</option>
-                        <option value="JP">일본 (JP)</option>
-                        <option value="GB">영국 (GB)</option>
-                        <option value="DE">독일 (DE)</option>
-                      </select>
-                    </label>
+                  <div className="mt-4 flex justify-end">
                     <button disabled={busy} className="primary-button min-w-32">
                       {busy ? (
                         <>
@@ -828,7 +842,7 @@ export default function Home() {
                     국내외 플랫폼 연결
                   </h2>
                 </div>
-                <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                <div className="grid grid-cols-2 gap-2">
                   {currentPlatforms.map((platform) => {
                     const key = platform.key;
                     const mode = platformModes[key] || platform.mode;
@@ -883,21 +897,21 @@ export default function Home() {
                     return (
                       <div
                         key={key}
-                        className="flex min-w-0 items-start gap-3 rounded-xl border border-slate-200/80 bg-white p-3"
+                        className="flex min-w-0 items-start gap-2 rounded-xl border border-slate-200/80 bg-white p-2"
                       >
                         <PlatformMark platform={key} small />
                         <div className="min-w-0 flex-1">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className="text-[11px] font-semibold text-slate-700">
+                          <div className="flex min-w-0 flex-nowrap items-center gap-1.5">
+                            <span className="min-w-0 truncate whitespace-nowrap text-[10px] font-semibold text-slate-700">
                               {platformNames[key]}
                             </span>
                             <span
-                              className={`rounded-full px-2 py-0.5 text-[9px] font-medium ${toneClasses[status.tone]}`}
+                              className={`shrink-0 whitespace-nowrap rounded-full px-1.5 py-0.5 text-[8px] font-medium ${toneClasses[status.tone]}`}
                             >
                               {status.label}
                             </span>
                           </div>
-                          <p className="mt-1 text-[10px] leading-4 text-slate-400">
+                          <p className="mt-0.5 truncate whitespace-nowrap text-[9px] leading-4 text-slate-400">
                             {status.description}
                           </p>
                         </div>
@@ -957,13 +971,59 @@ export default function Home() {
                 </div>
               </section>
             </div>
-            <AlbumPreview
-              album={album}
-              links={previewLinks}
-              published={published}
-            />
+            <div className="order-2 flex min-h-0 gap-3 xl:order-1">
+              <div className="sticky top-24 flex h-fit shrink-0 flex-col gap-2 self-start">
+                <button
+                  type="button"
+                  aria-label="앨범 중심 디자인 선택"
+                  aria-pressed={design === "classic"}
+                  title="앨범 중심"
+                  onClick={() => {
+                    setDesign("classic");
+                    setPublished(null);
+                  }}
+                  className={`flex h-10 w-10 items-center justify-center rounded-lg border bg-white transition ${design === "classic" ? "border-[#7e8af4] ring-1 ring-[#7e8af4]" : "border-slate-200 hover:border-slate-400"}`}
+                >
+                  <span
+                    className="flex h-6 w-5 flex-col items-center gap-0.5 rounded border border-slate-300 p-0.5"
+                    aria-hidden="true"
+                  >
+                    <i className="h-2 w-2 rounded-sm bg-slate-300" />
+                    <i className="h-0.5 w-3 rounded bg-slate-300" />
+                    <i className="h-1 w-3 rounded-sm border border-slate-200" />
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  aria-label="앨범 왼쪽 배치 디자인 선택"
+                  aria-pressed={design === "split"}
+                  title="앨범 왼쪽 배치"
+                  onClick={() => {
+                    setDesign("split");
+                    setPublished(null);
+                  }}
+                  className={`flex h-10 w-10 items-center justify-center rounded-lg border bg-white transition ${design === "split" ? "border-[#7e8af4] ring-1 ring-[#7e8af4]" : "border-slate-200 hover:border-slate-400"}`}
+                >
+                  <span
+                    className="flex h-5 w-6 gap-0.5 rounded border border-slate-300 p-0.5"
+                    aria-hidden="true"
+                  >
+                    <i className="h-full w-2 rounded-sm bg-slate-300" />
+                    <i className="flex-1 rounded-sm border border-slate-200" />
+                  </span>
+                </button>
+              </div>
+              <div className="create-scroll-pane min-w-0 flex-1 xl:min-h-0 xl:overflow-x-hidden xl:overflow-y-auto xl:overscroll-contain xl:pr-4">
+                <AlbumPreview
+                  album={album}
+                  links={previewLinks}
+                  published={published}
+                  design={published?.design || design}
+                />
+              </div>
+            </div>
           </div>
-          <footer className="mt-10 flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-5 text-[10px] text-slate-400">
+          <footer className="mt-10 flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-5 text-[10px] text-slate-400 xl:mt-4">
             <span>© {new Date().getFullYear()} gimoon studio</span>
             <span>Made for your next release.</span>
           </footer>
