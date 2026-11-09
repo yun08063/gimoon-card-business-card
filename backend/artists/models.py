@@ -7,6 +7,7 @@ class Artist(models.Model):
     slug = models.SlugField(unique=True)
     bio = models.TextField(blank=True)
     location = models.CharField(max_length=120, blank=True)
+    image = models.ImageField(upload_to="artists/profiles/", blank=True, null=True)
     is_published = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 

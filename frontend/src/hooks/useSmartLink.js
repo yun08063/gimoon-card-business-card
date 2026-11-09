@@ -1,10 +1,12 @@
 "use client";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { api, csrfHeaders, platformNames } from "@/lib/smartlinks";
 const storageKey = "gimoon-smartlink-draft";
 const libraryKey = "gimoon-smartlink-library";
 
 export default function useSmartLink() {
+  const router = useRouter();
   const [url, setUrl] = useState("");
   const [country, setCountry] = useState("KR");
   const [session, setSession] = useState(null);
@@ -273,6 +275,7 @@ export default function useSmartLink() {
       );
       rememberPublished(result, session);
       setEditing(null);
+      router.push(`/create/success/${result.slug}`);
     } catch (e) {
       setError(e instanceof Error ? e.message : "발행하지 못했습니다.");
     } finally {

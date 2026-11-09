@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Icon from "@/components/Icon";
+import { GimoonBrand } from "@/components/Brand";
 import { api } from "@/lib/smartlinks";
 
 const libraryKey = "gimoon-smartlink-library";
@@ -87,12 +88,7 @@ export default function LoginPage() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-[#f6f7fb] px-5 py-10 text-[#202431]">
       <section className="w-full max-w-[420px] rounded-2xl border border-slate-200 bg-white p-7 shadow-[0_20px_70px_-45px_rgba(25,35,65,.3)] sm:p-9">
-        <a
-          href="/"
-          className="mx-auto flex w-fit items-center gap-2 text-xl font-bold tracking-tighter"
-        >
-          <Icon name="link" size={21} className="text-[#5865f2]" /> gimoon
-        </a>
+        <GimoonBrand href="/" className="mx-auto text-xl tracking-tighter" />
         <h1 className="mt-8 text-center text-xl font-bold tracking-tight text-slate-900">
           {mode === "login" ? "다시 오셨네요" : "계정 만들기"}
         </h1>
@@ -159,10 +155,31 @@ export default function LoginPage() {
             if (!googleAvailable) event.preventDefault();
           }}
           aria-disabled={!googleAvailable}
-          className={`flex w-full items-center justify-center gap-2 rounded-lg border px-3 py-3 text-xs font-medium ${googleAvailable ? "border-slate-200 text-slate-700 hover:bg-slate-50" : "cursor-not-allowed border-slate-100 text-slate-400"}`}
+          className={`flex min-h-12 w-full items-center justify-center gap-3 rounded-xl border px-4 py-3 text-sm font-semibold transition ${googleAvailable ? "border-[#cbd4ff] bg-[#f7f8ff] text-slate-800 shadow-[0_4px_14px_-10px_rgba(88,101,242,.65)] hover:border-[#8792ff] hover:bg-[#eef0ff] hover:shadow-[0_8px_20px_-12px_rgba(88,101,242,.8)]" : "cursor-not-allowed border-slate-100 bg-slate-50 text-slate-400"}`}
         >
-          <span className="text-sm font-bold text-[#4285f4]">G</span> Google로
-          계속하기
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 48 48"
+            className="h-5 w-5 shrink-0"
+          >
+            <path
+              fill="#4285F4"
+              d="M43.6 24.5c0-1.4-.1-2.8-.4-4.1H24v7.8h11c-.5 2.5-1.9 4.6-4.1 6l6.6 5.1c3.9-3.6 6.1-8.8 6.1-14.8Z"
+            />
+            <path
+              fill="#EA4335"
+              d="M24 9.5c3.5 0 6.7 1.2 9.2 3.6l6.8-6.8C35.9 2.4 30.5 0 24 0 14.6 0 6.5 5.4 2.6 13.2l8 6.2c1.9-5.7 7.2-9.9 13.4-9.9Z"
+            />
+            <path
+              fill="#FBBC05"
+              d="M10.6 28.6c-.5-1.4-.8-3-.8-4.6s.3-3.2.8-4.6l-8-6.2C.9 16.5 0 20.1 0 24s.9 7.5 2.6 10.8l8-6.2Z"
+            />
+            <path
+              fill="#34A853"
+              d="M24 48c6.5 0 12-2.1 16-5.8l-6.6-5.1c-1.8 1.2-4.3 2-7.4 2-6.2 0-11.5-4.2-13.4-9.9l-8 6.2C6.5 43 14.6 48 24 48Z"
+            />
+          </svg>
+          Google 계정으로 계속하기
         </a>
         {!googleAvailable && (
           <p className="mt-2 text-center text-[10px] text-slate-400">

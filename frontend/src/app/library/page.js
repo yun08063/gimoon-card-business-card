@@ -1,44 +1,110 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Icon from "@/components/Icon";
 import PlatformMark from "@/components/PlatformMark";
+import WorkspaceShell from "@/components/WorkspaceShell";
 import { api, csrfHeaders, platformNames } from "@/lib/smartlinks";
 
 const libraryKey = "gimoon-smartlink-library";
+const filters = [
+  ["all", "전체"],
+  ["smartlink", "스마트 링크"],
+  ["artist", "아티스트 명함"],
+];
 
 export default function LibraryPage() {
   const router = useRouter();
   const [links, setLinks] = useState([]);
+  const [artists, setArtists] = useState([]);
+  const [filter, setFilter] = useState("all");
+  const [searchInput, setSearchInput] = useState("");
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageCount, setPageCount] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [user, setUser] = useState(null);
 
-  async function loadLinks() {
+  useEffect(() => {
+    let active = true;
+    api("auth/me/")
+      .then((account) => {
+        if (active) setUser(account.user);
+      })
+      .catch(() => {
+        if (active) router.replace("/login");
+      });
+    return () => {
+      active = false;
+    };
+  }, [router]);
+
+  const loadLinks = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
-      const account = await api("auth/me/");
-      setUser(account.user);
-      const saved = JSON.parse(localStorage.getItem(libraryKey) || "[]");
-      const tokens = saved
-        .filter((item) => item.id && item.token)
-        .map((item) => item.token)
-        .join(",");
+      const query = new URLSearchParams({
+        page: String(page),
+        type: filter,
+      });
+      if (search) query.set("search", search);
+      const response = await api(`library/?${query}`);
       setLinks(
-        await api("smartlinks/mine/", { headers: { "X-Edit-Tokens": tokens } }),
+        response.results
+          .filter((item) => item.kind === "smartlink")
+          .map(({ kind, ...item }) => item),
       );
-    } catch (e) {
-      router.replace("/login");
+      setArtists(
+        response.results
+          .filter((item) => item.kind === "artist")
+          .map(({ kind, ...item }) => item),
+      );
+      setTotalCount(response.count);
+      setPageCount(Math.max(1, Math.ceil(response.count / 20)));
+    } catch (requestError) {
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : "목록을 불러오지 못했습니다.",
+      );
+      if (requestError?.message?.includes("로그인")) router.replace("/login");
     } finally {
       setLoading(false);
     }
-  }
+  }, [filter, page, router, search]);
 
   useEffect(() => {
     loadLinks();
-  }, [router]);
+  }, [loadLinks]);
+
+  function submitSearch(event) {
+    event.preventDefault();
+    setPage(1);
+    setSearch(searchInput.trim());
+  }
+
+  function resetList() {
+    setSearchInput("");
+    setSearch("");
+    setFilter("all");
+    setPage(1);
+  }
+
+  function clearSearch() {
+    setSearchInput("");
+  }
+
+  function changeFilter(nextFilter) {
+    setFilter(nextFilter);
+    setPage(1);
+  }
+
+  function changePage(nextPage) {
+    setPage(Math.min(pageCount, Math.max(1, nextPage)));
+  }
 
   async function removeLink(link) {
     if (!window.confirm(`“${link.album.title}” 스마트 링크를 삭제할까요?`))
@@ -57,219 +123,308 @@ export default function LibraryPage() {
         JSON.stringify(saved.filter((item) => item.id !== link.resolution_id)),
       );
       setLinks((current) => current.filter((item) => item.slug !== link.slug));
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "삭제하지 못했습니다.");
+      setTotalCount((current) => Math.max(0, current - 1));
+      if (items.length === 1 && page > 1) setPage((current) => current - 1);
+      else loadLinks();
+    } catch (requestError) {
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : "삭제하지 못했습니다.",
+      );
     }
   }
 
-  async function signOut() {
+  async function removeArtist(artist) {
+    if (!window.confirm(`“${artist.name}” 아티스트 명함을 삭제할까요?`)) return;
     try {
-      await api("auth/logout/", {
-        method: "POST",
+      await api(`artists/${artist.slug}/`, {
+        method: "DELETE",
         headers: await csrfHeaders(),
       });
-      setUser(null);
-      await loadLinks();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "로그아웃하지 못했습니다.");
+      setArtists((current) => current.filter((item) => item.id !== artist.id));
+      setTotalCount((current) => Math.max(0, current - 1));
+      if (items.length === 1 && page > 1) setPage((current) => current - 1);
+      else loadLinks();
+    } catch (requestError) {
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : "삭제하지 못했습니다.",
+      );
     }
   }
 
+  const items = useMemo(() => {
+    const allItems = [
+      ...links.map((item) => ({ kind: "smartlink", item })),
+      ...artists.map((item) => ({ kind: "artist", item })),
+    ];
+    return allItems.sort(
+      (first, second) =>
+        new Date(second.item.created_at) - new Date(first.item.created_at),
+    );
+  }, [artists, links]);
+  const hasActiveListState = Boolean(
+    searchInput || search || filter !== "all" || page > 1,
+  );
+
   return (
-    <div className="min-h-screen bg-[#f6f7fb] text-[#202431]">
-      <aside className="fixed inset-y-0 left-0 z-20 hidden w-[216px] flex-col bg-[#15171f] px-5 py-8 lg:flex">
-        <a
-          href="/"
-          className="flex items-center gap-2.5 px-2 text-2xl font-bold tracking-[-.06em] text-white"
-        >
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#5865f2]">
-            <Icon name="link" size={19} />
-          </span>
-          gimoon{" "}
-          <span className="self-end pb-1 text-[9px] font-normal tracking-wider text-slate-500">
-            STUDIO
-          </span>
-        </a>
-        <div className="mt-12 px-3 text-[9px] font-semibold tracking-[.14em] text-[#666b7c]">
-          WORKSPACE
-        </div>
-        <a
-          href="/"
-          className="mt-4 flex w-full items-center gap-3 rounded-lg bg-white/[.07] px-3 py-3 text-left text-xs font-medium text-white"
-        >
-          <Icon name="grid" size={17} />내 스마트 링크
-        </a>
-        <a
-          href="/create?new=1"
-          className="mt-3 flex w-full items-center gap-3 rounded-lg px-3 py-3 text-xs font-medium text-[#8e94a6] transition hover:bg-white/[.07] hover:text-white"
-        >
-          <Icon name="plus" size={17} />새 링크 만들기
-        </a>
-        <div className="mt-auto rounded-xl border border-white/10 bg-white/[.025] p-4">
-          <div className="mb-3 flex h-8 w-8 items-center justify-center rounded-lg bg-[#292c40] text-[#9ca7ff]">
-            <Icon name="music" size={16} />
-          </div>
-          <p className="text-xs font-medium text-[#d8dbe4]">
-            음악에 더 가까이.
-          </p>
-          <p className="mt-2 text-[11px] leading-5 text-[#777f93]">
-            팬이 원하는 곳에서
-            <br />
-            당신의 음악을 만나도록.
-          </p>
-        </div>
-      </aside>
-      <div className="lg:ml-[216px]">
-        <header className="flex h-[76px] items-center justify-between border-b border-slate-200/80 bg-white px-5 sm:px-9 xl:px-12">
-          <div className="text-xs text-slate-400">
-            <span className="font-semibold text-slate-800 lg:hidden">
-              gimoon /{" "}
-            </span>
-            워크스페이스 <span className="mx-1 text-slate-300">/</span>
-            <span className="font-medium text-slate-700">내 스마트 링크</span>
-          </div>
-          <div className="flex items-center gap-4">
-            {user && (
-              <span className="hidden text-[11px] text-slate-400 sm:inline">
-                {user.email}
-              </span>
-            )}
-            {user ? (
-              <button
-                onClick={signOut}
-                className="text-[11px] text-slate-500 hover:text-rose-600"
-              >
-                로그아웃
-              </button>
-            ) : (
-              <a
-                href="/login"
-                className="text-[11px] font-medium text-[#5865f2]"
-              >
-                로그인
-              </a>
-            )}
-          </div>
-        </header>
-        <section className="mx-auto max-w-5xl px-5 pt-10 pb-16 sm:px-8 xl:px-12">
-          <div className="mb-7 flex flex-wrap items-end justify-between gap-4">
-            <div>
-              <p className="text-[10px] font-semibold tracking-[.16em] text-[#5865f2]">
-                YOUR LIBRARY
-              </p>
-              <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-900">
-                내 스마트 링크
-              </h1>
-              <p className="mt-2 text-xs text-slate-500">
-                {user
-                  ? `${user.email} 계정의 링크를 관리합니다.`
-                  : "로그인하면 여러 기기에서 링크를 관리할 수 있습니다."}
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={loadLinks}
-                className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600 hover:border-slate-300"
-              >
-                <Icon name="grid" size={14} /> 새로고침
-              </button>
-              <a href="/create?new=1" className="primary-button">
-                <Icon name="plus" size={14} /> 새 링크 만들기
-              </a>
-            </div>
-          </div>
-          {error && (
-            <p
-              role="alert"
-              className="mb-4 rounded-lg border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700"
-            >
-              {error}
+    <WorkspaceShell active="library" title="내 스마트 링크" user={user}>
+      <section className="mx-auto max-w-5xl px-5 pt-[clamp(1rem,3vh,2.5rem)] pb-[clamp(1rem,4vh,4rem)] sm:px-8 xl:px-12">
+        <div className="mb-7 flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p className="text-[10px] font-semibold tracking-[.16em] text-[#5865f2]">
+              YOUR LIBRARY
             </p>
+            <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-900">
+              내 스마트 링크
+            </h1>
+            <p className="mt-2 text-xs text-slate-500">
+              음악 링크와 아티스트 명함을 한 곳에서 관리하세요.
+            </p>
+          </div>
+          <a href="/create/choose" className="primary-button">
+            <Icon name="plus" size={14} /> 새 링크 만들기
+          </a>
+        </div>
+
+        <form onSubmit={submitSearch} className="mb-4 flex gap-2">
+          <label className="relative min-w-0 flex-1">
+            <span className="sr-only">링크 검색</span>
+            <Icon
+              name="search"
+              size={16}
+              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+            />
+            <input
+              type="text"
+              value={searchInput}
+              onChange={(event) => setSearchInput(event.target.value)}
+              placeholder="앨범명, 아티스트명, 소개 문구 검색"
+              className="h-10 w-full rounded-lg border border-slate-200 bg-white py-2 pr-10 pl-9 text-xs outline-none transition placeholder:text-slate-400 focus:border-[#aab3fc] focus:ring-2 focus:ring-[#5865f2]/10"
+            />
+            {searchInput && (
+              <button
+                type="button"
+                onClick={clearSearch}
+                aria-label="검색어 지우기"
+                title="검색어 지우기"
+                className="absolute top-1/2 right-2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-md text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+              >
+                <Icon name="plus" size={15} className="rotate-45" />
+              </button>
+            )}
+          </label>
+          <button
+            type="submit"
+            className="rounded-lg bg-[#5865f2] px-4 text-xs font-semibold text-white hover:bg-[#4955df]"
+          >
+            검색
+          </button>
+          {hasActiveListState && (
+            <button
+              type="button"
+              onClick={resetList}
+              className="rounded-lg border border-slate-200 bg-white px-3 text-xs font-medium text-slate-600 hover:bg-slate-50"
+            >
+              초기화
+            </button>
           )}
-          {loading ? (
-            <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center text-xs text-slate-400">
-              링크를 불러오는 중…
-            </div>
-          ) : links.length ? (
+        </form>
+
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-xs font-semibold text-slate-600">
+            검색 결과 <span className="ml-1 text-[#5865f2]">{totalCount}</span>
+          </h2>
+          <div
+            role="tablist"
+            aria-label="페이지 유형 필터"
+            className="flex rounded-lg border border-slate-200 bg-white p-1"
+          >
+            {filters.map(([key, label]) => (
+              <button
+                key={key}
+                type="button"
+                role="tab"
+                aria-selected={filter === key}
+                onClick={() => changeFilter(key)}
+                className={`rounded-md px-3 py-2 text-[11px] transition ${filter === key ? "bg-[#eef0ff] font-semibold text-[#5865f2]" : "text-slate-500 hover:text-slate-800"}`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {error && (
+          <p
+            role="alert"
+            className="mb-4 rounded-lg border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700"
+          >
+            {error}
+          </p>
+        )}
+
+        {loading ? (
+          <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center text-xs text-slate-400">
+            목록을 불러오는 중…
+          </div>
+        ) : items.length ? (
+          <>
             <div className="space-y-3">
-              {links.map((link) => (
-                <article
-                  key={link.slug}
-                  className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-4 sm:flex-row sm:items-center sm:p-5"
-                >
-                  {link.album.cover ? (
-                    <img
-                      src={link.album.cover}
-                      alt=""
-                      referrerPolicy="no-referrer"
-                      className="h-16 w-16 rounded-lg object-cover"
-                    />
-                  ) : (
-                    <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-slate-100 text-slate-400">
-                      <Icon name="music" size={24} />
-                    </div>
-                  )}
-                  <div className="min-w-0 flex-1">
-                    <h2 className="truncate text-sm font-semibold text-slate-900">
-                      {link.album.title}
-                    </h2>
-                    <p className="mt-1 truncate text-xs text-slate-500">
-                      {link.album.artist}
-                    </p>
-                    <div className="mt-2 flex flex-wrap gap-1.5">
-                      {link.links.map((item) => (
-                        <span
-                          key={item.platform}
-                          title={platformNames[item.platform] || item.platform}
-                        >
-                          <PlatformMark platform={item.platform} small />
+              {items.map(({ kind, item }) => {
+                const isArtist = kind === "artist";
+                const title = isArtist ? item.name : item.album.title;
+                const description = isArtist
+                  ? item.bio || item.location || "아티스트 명함"
+                  : item.album.artist;
+                const image = isArtist ? item.image_url : item.album.cover;
+                const viewUrl = isArtist
+                  ? `/artist/${item.slug}`
+                  : `/s/${item.slug}`;
+                const editUrl = isArtist
+                  ? `/artists/edit/${item.slug}`
+                  : `/create?edit=${item.slug}`;
+
+                return (
+                  <article
+                    key={`${kind}:${item.slug}`}
+                    className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-4 sm:flex-row sm:items-center sm:p-5"
+                  >
+                    {image ? (
+                      <img
+                        src={image}
+                        alt=""
+                        referrerPolicy={isArtist ? undefined : "no-referrer"}
+                        className="h-16 w-16 rounded-lg object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-slate-100 text-slate-400">
+                        <Icon name={isArtist ? "music" : "link"} size={24} />
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="truncate text-sm font-semibold text-slate-900">
+                          {title}
+                        </h3>
+                        <span className="rounded-full bg-[#f0f2ff] px-2 py-1 text-[9px] font-medium text-[#5865f2]">
+                          {isArtist ? "아티스트 명함" : "스마트 링크"}
                         </span>
-                      ))}
+                        {isArtist && (
+                          <span
+                            className={`rounded-full px-2 py-1 text-[9px] ${item.is_published ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"}`}
+                          >
+                            {item.is_published ? "공개" : "비공개"}
+                          </span>
+                        )}
+                      </div>
+                      <p className="mt-1 truncate text-xs text-slate-500">
+                        {description}
+                      </p>
+                      {isArtist ? (
+                        <p className="mt-2 text-[10px] text-slate-400">
+                          홍보 링크 {item.links.length}개
+                        </p>
+                      ) : (
+                        <div className="mt-2 flex flex-wrap gap-1.5">
+                          {item.links.map((link) => (
+                            <span
+                              key={link.platform}
+                              title={
+                                platformNames[link.platform] || link.platform
+                              }
+                            >
+                              <PlatformMark platform={link.platform} small />
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <a
-                      href={`/s/${link.slug}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-[11px] font-medium text-slate-600 hover:bg-slate-50"
-                    >
-                      보기 <Icon name="external" size={12} />
-                    </a>
-                    <a
-                      href={`/create?edit=${link.slug}`}
-                      className="rounded-lg border border-[#dfe2ff] bg-[#f5f6ff] px-3 py-2 text-[11px] font-medium text-[#5865f2] hover:bg-[#eceeff]"
-                    >
-                      수정
-                    </a>
-                    <button
-                      onClick={() => removeLink(link)}
-                      className="rounded-lg border border-rose-100 px-3 py-2 text-[11px] font-medium text-rose-600 hover:bg-rose-50"
-                    >
-                      삭제
-                    </button>
-                  </div>
-                </article>
-              ))}
+                    <div className="flex flex-wrap items-center gap-2">
+                      {(!isArtist || item.is_published) && (
+                        <a
+                          href={viewUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-[11px] font-medium text-slate-600 hover:bg-slate-50"
+                        >
+                          보기 <Icon name="external" size={12} />
+                        </a>
+                      )}
+                      <a
+                        href={editUrl}
+                        className="rounded-lg border border-[#dfe2ff] bg-[#f5f6ff] px-3 py-2 text-[11px] font-medium text-[#5865f2] hover:bg-[#eceeff]"
+                      >
+                        수정
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          isArtist ? removeArtist(item) : removeLink(item)
+                        }
+                        className="rounded-lg border border-rose-100 px-3 py-2 text-[11px] font-medium text-rose-600 hover:bg-rose-50"
+                      >
+                        삭제
+                      </button>
+                    </div>
+                  </article>
+                );
+              })}
             </div>
-          ) : (
-            <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-14 text-center">
-              <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-xl bg-[#f0f2ff] text-[#5865f2]">
-                <Icon name="link" size={20} />
-              </div>
-              <h2 className="mt-4 text-sm font-semibold text-slate-800">
-                아직 발행한 스마트 링크가 없습니다
-              </h2>
-              <p className="mt-2 text-xs text-slate-400">
-                스마트 링크를 발행하면 이 브라우저의 목록에 표시됩니다.
-              </p>
-              <a href="/create?new=1" className="primary-button mx-auto mt-5">
-                첫 링크 만들기 <Icon name="arrow" size={14} />
+            <nav
+              aria-label="목록 페이지"
+              className="mt-6 flex items-center justify-center gap-3"
+            >
+              <button
+                type="button"
+                onClick={() => changePage(page - 1)}
+                disabled={page <= 1}
+                className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                이전
+              </button>
+              <span className="text-xs tabular-nums text-slate-500">
+                {page} / {pageCount}
+              </span>
+              <button
+                type="button"
+                onClick={() => changePage(page + 1)}
+                disabled={page >= pageCount}
+                className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                다음
+              </button>
+            </nav>
+          </>
+        ) : (
+          <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-14 text-center">
+            <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-xl bg-[#f0f2ff] text-[#5865f2]">
+              <Icon name={filter === "artist" ? "music" : "link"} size={20} />
+            </div>
+            <h2 className="mt-4 text-sm font-semibold text-slate-800">
+              {search
+                ? "검색 결과가 없습니다"
+                : filter === "artist"
+                  ? "아직 만든 아티스트 명함이 없습니다"
+                  : filter === "smartlink"
+                    ? "아직 발행한 스마트 링크가 없습니다"
+                    : "아직 만든 페이지가 없습니다"}
+            </h2>
+            <p className="mt-2 text-xs text-slate-400">
+              {search
+                ? "다른 검색어로 다시 찾아보세요."
+                : "새 링크 만들기에서 페이지 종류를 선택해 시작하세요."}
+            </p>
+            {!search && (
+              <a href="/create/choose" className="primary-button mx-auto mt-5">
+                새 링크 만들기 <Icon name="arrow" size={14} />
               </a>
-            </div>
-          )}
-        </section>
-      </div>
-    </div>
+            )}
+          </div>
+        )}
+      </section>
+    </WorkspaceShell>
   );
 }
